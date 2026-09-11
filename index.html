@@ -109,7 +109,9 @@ table.cc-tab tbody tr:hover{background:#f4f7fa}
   html,body{background:#fff}
   .app{max-width:100%;padding:0}
   header.topo{border-radius:0;box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .imprimir-btn,header.topo a.voltar,.cc-lightbox,.cc-nav,button[onclick*="ccToggleTodos"]{display:none !important}
+  .imprimir-btn,header.topo a.voltar,.cc-lightbox,.cc-nav,button[onclick*="ccToggleTodos"],
+  #ccKmDeInput,#ccKmAteInput,button[onclick*="ccAplicarFiltroKm"],button[onclick*="ccLimparFiltroKm"],
+  .cc-bloco label{display:none !important}
   .kpi,.cc-bloco{box-shadow:none !important;border:1px solid var(--cinza-borda);break-inside:avoid;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
   table.cc-tab{box-shadow:none !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1677,6 +1679,29 @@ function ccContagem(clp){
   clp.itens.forEach(it=>cont[ccClassificar(it).status]++);
   return cont;
 }
+// ---- Filtro por KM (aplicado ao CLP selecionado) ----
+let ccKmDe=null, ccKmAte=null;
+function ccKmMetros(v){
+  if(v==null || v==='') return null;
+  if(typeof v==='string' && v.includes('+')){
+    const m=v.match(/(-?\d+)\+(\d+)/); if(m) return parseInt(m[1])*1000+parseInt(m[2]);
+  }
+  const n=Number(v); return Number.isFinite(n)? n : null;
+}
+function ccFmtKm(v){
+  const n=ccKmMetros(v); if(n==null) return null;
+  const km=Math.floor(n/1000), resto=Math.round(n-km*1000);
+  return km+'+'+String(resto).padStart(3,'0');
+}
+function ccAplicarFiltroKm(){
+  const de=document.getElementById('ccKmDeInput').value.trim().replace(',','.');
+  const ate=document.getElementById('ccKmAteInput').value.trim().replace(',','.');
+  ccKmDe = de===''? null : parseFloat(de);
+  ccKmAte = ate===''? null : parseFloat(ate);
+  renderCrosscheck();
+}
+function ccLimparFiltroKm(){ ccKmDe=null; ccKmAte=null; renderCrosscheck(); }
+
 function renderClpBloco(clp){
   const linhas=clp.itens.map(it=>({it,c:ccClassificar(it)}));
   const cont=ccContagem(clp);
@@ -1694,20 +1719,57 @@ function renderClpBloco(clp){
     +'</div>';
   const divergentes=linhas.filter(l=>l.c.status!=='ok');
   const verTodos=!!CC_VER_TODOS[clp.clp];
-  const mostrar= verTodos||!divergentes.length ? linhas : divergentes;
+  let mostrar= verTodos||!divergentes.length ? linhas : divergentes;
+
+  const filtroKmAtivo = ccKmDe!=null || ccKmAte!=null;
+  if(filtroKmAtivo){
+    const de = ccKmDe!=null? ccKmDe*1000 : -Infinity;
+    const ate = ccKmAte!=null? ccKmAte*1000 : Infinity;
+    mostrar = mostrar.filter(l=>{
+      const eapIni = l.c.eap? ccKmMetros(l.c.eap['KM Inicial']) : null;
+      const eapFim = l.c.eap? ccKmMetros(l.c.eap['KM Final']) : null;
+      const lo = eapIni!=null?eapIni:eapFim, hi = eapFim!=null?eapFim:eapIni;
+      if(lo==null && hi==null) return false;
+      return hi>=de && lo<=ate;
+    });
+  }
+
+  h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'
+    +'<label class="ef-ajuda" style="margin:0">Filtrar por KM:</label>'
+    +'<input type="number" step="0.001" id="ccKmDeInput" placeholder="de (ex.: 80)" value="'+(ccKmDe!=null?ccKmDe:'')+'" style="width:110px;padding:6px 9px;border:1px solid var(--cinza-borda);border-radius:8px;font-family:inherit;font-size:12px">'
+    +'<span class="ef-ajuda" style="margin:0">até</span>'
+    +'<input type="number" step="0.001" id="ccKmAteInput" placeholder="até (ex.: 85)" value="'+(ccKmAte!=null?ccKmAte:'')+'" style="width:110px;padding:6px 9px;border:1px solid var(--cinza-borda);border-radius:8px;font-family:inherit;font-size:12px">'
+    +'<button type="button" onclick="ccAplicarFiltroKm()" style="border:1px solid var(--navy);background:var(--navy);color:#fff;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Aplicar</button>'
+    +(filtroKmAtivo?'<button type="button" onclick="ccLimparFiltroKm()" style="border:1px solid var(--cinza-borda);background:#fff;color:var(--navy);padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Limpar filtro</button>':'')
+    +'</div>';
+
   h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">'
-    +'<span class="ef-ajuda" style="margin:0">'+(verTodos||!divergentes.length?('Mostrando todos os '+linhas.length+' itens.'):('Mostrando '+divergentes.length+' item(ns) com divergência de '+linhas.length+' no total.'))+'</span>'
+    +'<span class="ef-ajuda" style="margin:0">'+(filtroKmAtivo?('Mostrando '+mostrar.length+' item(ns) no KM filtrado. '):'')+(verTodos||!divergentes.length?('Mostrando '+(filtroKmAtivo?'':'todos os ')+linhas.length+' itens.'):('Mostrando '+divergentes.length+' item(ns) com divergência de '+linhas.length+' no total.'))+'</span>'
     +(divergentes.length?'<button type="button" onclick="ccToggleTodos(\''+clp.clp+'\')" style="border:1px solid var(--cinza-borda);background:#fff;color:var(--navy);padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+(verTodos?'Mostrar só divergências':'Mostrar todos os itens (com fotos)')+'</button>':'')
     +'</div>';
   h+='<div style="overflow-x:auto"><table class="cc-tab"><thead><tr>'
-    +'<th>ID</th><th>Item</th><th class="l">Descrição da pendência</th><th>KM</th><th>Validação (CLP)</th><th>Status (base)</th><th>Divergência</th><th>Evidência</th>'
+    +'<th>ID</th><th>Certificação</th><th>Segmento</th><th>Ativo</th><th>Empresa</th><th>Origem</th><th>Tipo</th>'
+    +'<th class="l">Descrição da pendência</th><th>KM inicial</th><th>KM final</th>'
+    +'<th>Item (CLP)</th><th>Validação (CLP)</th><th>Status (base)</th><th>Divergência</th><th>Evidência</th>'
     +'</tr></thead><tbody>'
     +mostrar.map(l=>{
-      const eapTxt=l.c.eap?(l.c.eapEncerrada?'Encerrado':'Aberta'):'—';
+      const eap=l.c.eap;
+      const eapTxt=eap?(l.c.eapEncerrada?'Encerrado':'Aberta'):'—';
       const divTxt=l.c.status==='ok' ? '<span style="color:var(--verde);font-weight:700">OK</span>' : CC_STATUS_LABEL[l.c.status];
-      const descricao=(l.c.eap && l.c.eap['Descrição Pendencia']) ? l.c.eap['Descrição Pendencia'] : l.it.resumo;
-      return '<tr><td><b>'+l.it.id+'</b></td><td>'+escHtml(l.it.item)+'</td><td class="l">'+escHtml(descricao)+'</td>'
-        +'<td>'+escHtml(CLP_KM[l.it.id]||'—')+'</td>'
+      const descricao=(eap && eap['Descrição Pendencia']) ? eap['Descrição Pendencia'] : l.it.resumo;
+      const g=campo=>eap&&eap[campo]!=null&&eap[campo]!=='' ? eap[campo] : '—';
+      const kmIni = eap? (ccFmtKm(eap['KM Inicial'])||'—') : '—';
+      const kmFim = eap? (ccFmtKm(eap['KM Final'])||'—') : '—';
+      return '<tr><td><b>'+l.it.id+'</b></td>'
+        +'<td>'+escHtml(g('Certificação ?'))+'</td>'
+        +'<td>'+escHtml(g('Segmento'))+'</td>'
+        +'<td>'+escHtml(g('Ativo'))+'</td>'
+        +'<td>'+escHtml(g('Empresa'))+'</td>'
+        +'<td>'+escHtml(g('Origem'))+'</td>'
+        +'<td>'+escHtml(g('Tipo de Pendencia'))+'</td>'
+        +'<td class="l">'+escHtml(descricao)+'</td>'
+        +'<td>'+escHtml(kmIni)+'</td><td>'+escHtml(kmFim)+'</td>'
+        +'<td>'+escHtml(l.it.item)+'</td>'
         +'<td>'+escHtml(l.it.validacao)+'</td><td>'+eapTxt+'</td>'
         +'<td class="l">'+divTxt+'</td><td>'+ccFotosHTML(clp.clp,l.it.id)+'</td></tr>';
     }).join('')
