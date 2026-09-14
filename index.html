@@ -107,7 +107,50 @@ table.cc-tab tbody tr:hover{background:#f4f7fa}
   [style*="overflow-x:auto"],[style*="overflow-x: auto"]{overflow:visible !important}
   .cc-fotos img{height:141px;width:141px}
 }
+
+/* ---- Roteiro de Campo: ficha por pendência, agrupada por ponto de KM ---- */
+body.modo-roteiro .app{display:none}
+#roteiroCampo{display:none}
+body.modo-roteiro #roteiroCampo{display:block;max-width:900px;margin:0 auto;padding:22px 26px 60px}
+#roteiroCampo *{box-sizing:border-box}
+#roteiroCampo h1{font-size:19px;color:var(--navy);margin:0 0 10px}
+#roteiroCampo .resumo-admin{border:1px solid var(--cinza-borda);border-radius:10px;padding:14px 18px;margin-bottom:18px;break-inside:avoid}
+#roteiroCampo .resumo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 18px;font-size:12px;margin-bottom:10px}
+#roteiroCampo .resumo-contagens{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:11px;margin-bottom:10px;border-top:1px solid var(--cinza-bg);padding-top:8px}
+#roteiroCampo .resumo-divergencias{font-size:11px;color:var(--cinza-txt);margin-bottom:6px}
+#roteiroCampo .resumo-id{font-size:10.5px;color:var(--cinza-txt);font-style:italic}
+#roteiroCampo .ponto-header{background:var(--navy);color:#fff;font-weight:800;font-size:13.5px;padding:9px 14px;border-radius:8px 8px 0 0;
+  margin-top:20px;break-after:avoid;break-inside:avoid;letter-spacing:.2px}
+#roteiroCampo .ponto-header:first-of-type{margin-top:0}
+#roteiroCampo .ficha{border:1px solid var(--navy);border-top:none;padding:14px 16px;break-inside:avoid}
+#roteiroCampo .ficha + .ficha{border-top:1px dashed #cbd3df}
+#roteiroCampo .ficha-topo{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--navy);padding-bottom:5px;margin-bottom:8px}
+#roteiroCampo .ficha-num{font-size:11px;color:var(--cinza-txt);font-weight:700;text-transform:uppercase}
+#roteiroCampo .ficha-km{font-size:22px;font-weight:900;color:var(--navy)}
+#roteiroCampo .ficha-id-item{display:flex;gap:28px;margin-bottom:8px}
+#roteiroCampo .ficha-id-item .lbl{font-size:9.5px;color:var(--cinza-txt);text-transform:uppercase;display:block;letter-spacing:.3px}
+#roteiroCampo .ficha-id-item .val-grande{font-size:19px;font-weight:900;color:var(--navy)}
+#roteiroCampo .ficha-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:11.5px;color:#333;margin-bottom:10px}
+#roteiroCampo .ficha-desc-tit{font-size:9.5px;font-weight:800;color:var(--cinza-txt);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+#roteiroCampo .ficha-desc p{font-size:13px;margin:0 0 10px;line-height:1.45}
+#roteiroCampo .ficha-evidencia{margin-bottom:10px}
+#roteiroCampo .ficha-fotos{display:flex;gap:10px;flex-wrap:wrap}
+#roteiroCampo .ficha-fotos img{max-width:240px;max-height:240px;object-fit:contain;border:1px solid var(--cinza-borda);border-radius:6px;background:#F5F7FA}
+#roteiroCampo .ficha-fotos .legenda{font-size:9px;color:var(--cinza-txt);text-align:center;margin-top:2px}
+#roteiroCampo .sem-evidencia{border:1px dashed #cbd3df;border-radius:6px;padding:16px;text-align:center;font-size:11.5px;color:#8a94a3;font-weight:700}
+#roteiroCampo .ficha-admin{font-size:9.5px;color:#8a94a3;border-top:1px solid var(--cinza-bg);padding-top:5px;margin-bottom:10px}
+#roteiroCampo .ficha-decisao,#roteiroCampo .ficha-obs{margin-bottom:10px}
+#roteiroCampo .linha-escrita{border-bottom:1px solid #9aa5b5;height:22px;margin-bottom:5px}
+#roteiroCampo .linha-escrita.curta{display:inline-block;width:280px;vertical-align:bottom;margin-left:8px;height:18px}
+#roteiroCampo .ficha-situacao{font-size:11.5px;font-weight:700;margin-bottom:10px}
+#roteiroCampo .ficha-rodape{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;border-top:1px solid var(--cinza-bg);padding-top:8px}
+#roteiroCampo .rc-barra{padding:10px 0;display:flex;gap:10px;margin-bottom:16px}
+#roteiroCampo .rc-barra button{padding:8px 16px;border-radius:999px;font-weight:700;cursor:pointer;font-family:inherit;font-size:12.5px}
+#roteiroCampo .rc-barra .imprimir{border:none;background:var(--laranja);color:#fff}
+#roteiroCampo .rc-barra .fechar{border:1px solid var(--navy);background:#fff;color:var(--navy)}
+@media print{ .no-print{display:none !important} }
 </style>
+<style id="roteiroPageStyle"></style>
 </head>
 <body>
 <div class="app">
@@ -118,6 +161,7 @@ table.cc-tab tbody tr:hover{background:#f4f7fa}
         <button type="button" class="imprimir-btn" onclick="document.getElementById('inputEap').click()">📂 Carregar EAP</button>
         <button type="button" class="imprimir-btn" onclick="document.getElementById('inputClp').click()">📂 Carregar CLP</button>
         <button type="button" class="imprimir-btn" onclick="window.print()">🖨 Exportar / Imprimir PDF</button>
+        <button type="button" class="imprimir-btn" onclick="gerarRoteiroCampo()">📋 Roteiro de Campo (PDF)</button>
       </div>
       <input type="file" id="inputEap" accept=".xlsx" style="display:none" onchange="onEapFileChosen(this.files[0])">
       <input type="file" id="inputClp" accept=".xlsx" style="display:none" onchange="onClpFileChosen(this.files[0])">
@@ -128,6 +172,8 @@ table.cc-tab tbody tr:hover{background:#f4f7fa}
   </header>
   <main id="main"><p class="ef-ajuda">Carregando base de pendências…</p></main>
 </div>
+
+<div id="roteiroCampo"></div>
 
 <div class="cc-lightbox" id="ccLightbox">
   <div class="cc-lb-close" onclick="ccFecharLightbox()">✕</div>
@@ -4259,6 +4305,164 @@ function renderCrosscheck(){
 
   alvo.innerHTML=h;
   hydrateLazyPhotos();
+}
+
+// ============================================================
+// Roteiro de Campo — versão do relatório pensada para impressão e uso na
+// pista: uma ficha por pendência (KM e ID em destaque, foto grande, linhas
+// em branco para a decisão do inspetor), agrupada por ponto de KM, em vez
+// da tabela larga de conferência administrativa. Troca o conteúdo da
+// própria página (não abre janela nova — pop-ups costumam ser bloqueados)
+// e usa um <style> à parte para forçar A4 retrato só nesse modo; "Voltar"
+// restaura a tela normal. As duas versões do relatório continuam
+// disponíveis. Usa o mesmo filtro de KM/Status já aplicado na tela (é
+// assim que o usuário já define o trecho do dia).
+// ============================================================
+function montarLinhasCrosscheck(){
+  const lista=ccListaClps();
+  let linhas=[];
+  lista.forEach(clp=>{
+    clp.itens.forEach(it=>{
+      const c=ccClassificar(it);
+      const eapIni = c.eap? ccKmMetros(c.eap['KM Inicial']) : null;
+      const eapFim = c.eap? ccKmMetros(c.eap['KM Final']) : null;
+      const kmOrdenacao = eapIni!=null? eapIni : (eapFim!=null? eapFim : Infinity);
+      linhas.push({clp,it,c,eapIni,eapFim,kmOrdenacao});
+    });
+  });
+  linhas.sort((a,b)=>a.kmOrdenacao-b.kmOrdenacao);
+  return linhas;
+}
+function montarLinhasRoteiro(){
+  let sel=montarLinhasCrosscheck();
+  // roteiro de campo é sobre TODAS as pendências do trecho, não só as divergentes
+  const filtroKmAtivo = ccKmDe!=null || ccKmAte!=null;
+  if(filtroKmAtivo){
+    const de = ccKmDe!=null? ccKmDe*1000 : -Infinity;
+    const ate = ccKmAte!=null? ccKmAte*1000 : Infinity;
+    sel = sel.filter(l=>{
+      const lo = l.eapIni!=null?l.eapIni:l.eapFim, hi = l.eapFim!=null?l.eapFim:l.eapIni;
+      if(lo==null && hi==null) return false;
+      return hi>=de && lo<=ate;
+    });
+  }
+  const filtroStatusAtivo = ccStatusFiltro!=='todos';
+  if(filtroStatusAtivo){
+    sel = sel.filter(l=> l.c.eap && (ccStatusFiltro==='encerrado' ? l.c.eapEncerrada : !l.c.eapEncerrada));
+  }
+  // sem KM conhecido não dá pra posicionar no roteiro sequencial
+  return sel.filter(l=> l.eapIni!=null || l.eapFim!=null);
+}
+function montarFotosFicha(clpKey, id){
+  const ev=(CLP_EVIDENCIAS[clpKey]||{})[id];
+  if(!ev || !Object.keys(ev).length){
+    return '<div class="sem-evidencia">SEM EVIDÊNCIA FOTOGRÁFICA DISPONÍVEL</div>';
+  }
+  const entradas=Object.keys(ev).map(k=>({key:k,src:ev[k],label:CC_FOTO_LABEL[k]||k}));
+  const lazy=isUploadedClp(clpKey);
+  return '<div class="ficha-fotos">'+entradas.map(e=>{
+    const atributos = lazy
+      ? (' data-lazy-clp="'+escHtml(clpKey)+'" data-lazy-file="'+escHtml(e.src)+'" src="'+CC_PLACEHOLDER+'"')
+      : (' src="evidencias/'+e.src+'"');
+    return '<div><img'+atributos+' alt="'+escHtml(e.label)+'"><div class="legenda">'+escHtml(e.label)+'</div></div>';
+  }).join('')+'</div>';
+}
+function sairRoteiroCampo(){
+  document.body.classList.remove('modo-roteiro');
+  document.getElementById('roteiroPageStyle').textContent='';
+  window.scrollTo(0,0);
+}
+function gerarRoteiroCampo(){
+  const sel=montarLinhasRoteiro();
+  if(!sel.length){
+    alert('Nenhuma pendência com KM conhecido no filtro atual. Ajuste o filtro por KM/Status (no topo da página) e tente de novo — o roteiro segue o mesmo trecho que está filtrado na tela.');
+    return;
+  }
+
+  const pontos=[];
+  sel.forEach(l=>{
+    const ultimo=pontos[pontos.length-1];
+    if(ultimo && ultimo.km===l.kmOrdenacao) ultimo.itens.push(l);
+    else pontos.push({km:l.kmOrdenacao, itens:[l]});
+  });
+
+  const kmMin=sel[0].kmOrdenacao, kmMax=sel[sel.length-1].kmOrdenacao;
+  const totalPend=sel.length, totalPontos=pontos.length;
+  const porTipo={}, porEmpresa={}, ativos=new Set();
+  const totDiv={ok:0,'clp-a-frente':0,'base-a-frente':0,'nao-encontrado':0};
+  sel.forEach(l=>{
+    const eap=l.c.eap;
+    const tipo=(eap&&eap['Tipo de Pendencia'])||'—'; porTipo[tipo]=(porTipo[tipo]||0)+1;
+    const emp=(eap&&eap['Empresa'])||'—'; porEmpresa[emp]=(porEmpresa[emp]||0)+1;
+    if(eap&&eap['Ativo']) ativos.add(eap['Ativo']);
+    totDiv[l.c.status]++;
+  });
+  const listaOrdenada=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>escHtml(k)+': <b>'+v+'</b>').join(' · ');
+  const dataHoje=new Date().toLocaleDateString('pt-BR');
+
+  let fichasHtml='';
+  let contPend=0;
+  for(let pi=0; pi<pontos.length; pi++){
+    const pt=pontos[pi];
+    fichasHtml+='<div class="ponto-header">PONTO DE INSPEÇÃO '+(pi+1)+' DE '+totalPontos+' — KM '+ccFmtKm(pt.km)+' — '
+      +pt.itens.length+' PENDÊNCIA'+(pt.itens.length>1?'S':'')+' NESTE PONTO</div>';
+    for(const l of pt.itens){
+      contPend++;
+      const eap=l.c.eap;
+      const g=campo=>eap&&eap[campo]!=null&&eap[campo]!=='' ? eap[campo] : '—';
+      const kmIni=eap?(ccFmtKm(eap['KM Inicial'])||'—'):'—';
+      const kmFim=eap?(ccFmtKm(eap['KM Final'])||'—'):'—';
+      const kmTxt=(kmFim!=='—' && kmFim!==kmIni) ? (kmIni+' a '+kmFim) : kmIni;
+      const descricao=(eap && eap['Descrição Pendencia']) ? eap['Descrição Pendencia'] : (l.it.resumo||'—');
+      const fotos=montarFotosFicha(l.clp.clp, l.it.id);
+      const eapTxt=eap?(l.c.eapEncerrada?'Encerrado':'Aberta'):'—';
+      const divTxt=l.c.status==='ok' ? 'OK' : CC_STATUS_LABEL[l.c.status];
+      fichasHtml+='<div class="ficha">'
+        +'<div class="ficha-topo"><div class="ficha-num">Pendência '+contPend+' de '+totalPend+'</div><div class="ficha-km">KM '+kmTxt+'</div></div>'
+        +'<div class="ficha-id-item"><div><span class="lbl">ID</span><span class="val-grande">'+escHtml(l.it.id)+'</span></div>'
+        +'<div><span class="lbl">Item CLP</span><span class="val-grande">'+escHtml(l.it.item||'—')+'</span></div></div>'
+        +'<div class="ficha-meta"><span><b>Ativo:</b> '+escHtml(g('Ativo'))+'</span><span><b>Tipo:</b> '+escHtml(g('Tipo de Pendencia'))+'</span>'
+        +'<span><b>Empresa:</b> '+escHtml(g('Empresa'))+'</span><span><b>CLP:</b> '+escHtml(l.clp.clp)+'</span></div>'
+        +'<div class="ficha-desc"><div class="ficha-desc-tit">Pendência identificada</div><p>'+escHtml(descricao)+'</p></div>'
+        +'<div class="ficha-evidencia"><div class="ficha-desc-tit">Evidência de referência</div>'+fotos+'</div>'
+        +'<div class="ficha-admin">Certificação: '+escHtml(g('Certificação ?'))+' · Segmento: '+escHtml(g('Segmento'))+' · Origem: '+escHtml(g('Origem'))
+        +' · Validação CLP: '+escHtml(l.it.validacao||'—')+' · Status base: '+eapTxt+' · Divergência: '+divTxt+'</div>'
+        +'<div class="ficha-decisao"><div class="ficha-desc-tit">Decisão da inspeção</div><div class="linha-escrita"></div><div class="linha-escrita"></div><div class="linha-escrita"></div></div>'
+        +'<div class="ficha-situacao">Situação definida em campo: <span class="linha-escrita curta"></span></div>'
+        +'<div class="ficha-obs"><div class="ficha-desc-tit">Observações complementares</div><div class="linha-escrita"></div><div class="linha-escrita"></div></div>'
+        +'<div class="ficha-rodape"><span>Data: ____/____/________</span><span>Inspetor: ________________________________</span></div>'
+        +'</div>';
+    }
+  }
+
+  const resumoHtml='<div class="resumo-admin">'
+    +'<h1>Roteiro de Inspeção de Campo</h1>'
+    +'<div class="resumo-grid">'
+    +'<div>KM inicial do trecho: <b>'+ccFmtKm(kmMin)+'</b></div>'
+    +'<div>KM final do trecho: <b>'+ccFmtKm(kmMax)+'</b></div>'
+    +'<div>Extensão: <b>'+((kmMax-kmMin)/1000).toFixed(3)+' km</b></div>'
+    +'<div>Total de pendências: <b>'+totalPend+'</b></div>'
+    +'<div>Pontos de inspeção: <b>'+totalPontos+'</b></div>'
+    +'<div>Data de geração: <b>'+dataHoje+'</b></div>'
+    +'</div>'
+    +'<div class="resumo-contagens">'
+    +'<div><b>Por tipo</b><br>'+listaOrdenada(porTipo)+'</div>'
+    +'<div><b>Por empresa</b><br>'+listaOrdenada(porEmpresa)+'</div>'
+    +'<div><b>Ativos envolvidos</b><br>'+ativos.size+' ativo(s) distinto(s)</div>'
+    +'</div>'
+    +'<div class="resumo-divergencias">OK: <b>'+totDiv.ok+'</b> · Encerrado no CLP, aberta na base: <b>'+totDiv['clp-a-frente']+'</b> · '
+    +'Encerrada na base, pendente no CLP: <b>'+totDiv['base-a-frente']+'</b> · ID não encontrado na base: <b>'+totDiv['nao-encontrado']+'</b></div>'
+    +'<div class="resumo-id">Identificação: Roteiro de Inspeção — KM '+ccFmtKm(kmMin)+' a '+ccFmtKm(kmMax)+' — gerado em '+dataHoje+'</div>'
+    +'</div>';
+
+  document.getElementById('roteiroCampo').innerHTML =
+    '<div class="no-print rc-barra"><button class="imprimir" onclick="window.print()">🖨 Imprimir roteiro</button>'
+    +'<button class="fechar" onclick="sairRoteiroCampo()">← Voltar à conferência</button></div>'
+    +resumoHtml+fichasHtml;
+  document.getElementById('roteiroPageStyle').textContent='@media print{ @page{size:A4 portrait;margin:15mm} }';
+  document.body.classList.add('modo-roteiro');
+  hydrateLazyPhotos();
+  window.scrollTo(0,0);
 }
 
 // ============================================================
