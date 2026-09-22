@@ -4269,11 +4269,16 @@ function renderCrosscheck(){
   const linhas=montarLinhasCrosscheckEap();
 
   // ---- resumo agregado ----
-  const totGeral={comFoto:0,semFoto:0};
-  linhas.forEach(l=> l.foto? totGeral.comFoto++ : totGeral.semFoto++);
+  const totGeral={comFoto:0,semFoto:0,abertas:0,encerradas:0};
+  linhas.forEach(l=>{
+    l.foto? totGeral.comFoto++ : totGeral.semFoto++;
+    l.eapEncerrada? totGeral.encerradas++ : totGeral.abertas++;
+  });
   h+='<div class="cc-bloco"><h3>Resumo geral</h3>'
     +'<p class="ef-ajuda" style="margin-top:-2px">'+linhas.length+' pendências na base EAP.</p>'
     +'<div class="kpis">'
+    +'<div class="kpi azul"><div class="rot">Abertas</div><div class="val">'+totGeral.abertas+'</div></div>'
+    +'<div class="kpi laranja"><div class="rot">Encerradas</div><div class="val">'+totGeral.encerradas+'</div></div>'
     +'<div class="kpi verde"><div class="rot">Com foto do CLP</div><div class="val">'+totGeral.comFoto+'</div></div>'
     +'<div class="kpi vermelho"><div class="rot">Sem foto do CLP</div><div class="val">'+totGeral.semFoto+'</div></div>'
     +'</div></div>';
