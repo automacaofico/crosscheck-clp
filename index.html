@@ -136,7 +136,8 @@ body.modo-roteiro #roteiroCampo{display:block}
   display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 #roteiroCampo .ficha-topo .pt-titulo{font-size:20px;font-weight:800;letter-spacing:.2px}
 #roteiroCampo .ficha-topo .pt-sub{font-size:12.5px;font-weight:700;opacity:.85;margin-top:4px}
-#roteiroCampo .ficha-topo .pt-km{font-size:32px;font-weight:900;white-space:nowrap}
+#roteiroCampo .ficha-topo .pt-km{font-size:32px;font-weight:900;white-space:nowrap;text-align:right}
+#roteiroCampo .ficha-topo .pt-km-acesso{font-size:12.5px;font-weight:700;opacity:.85;margin-top:2px}
 #roteiroCampo .ficha-corpo{display:flex;gap:18px;flex:1}
 #roteiroCampo .ficha-col{flex:1;border:1px solid var(--cinza-borda);border-radius:12px;padding:18px 22px;display:flex;flex-direction:column;min-width:0}
 #roteiroCampo .pend-num{color:var(--navy);font-weight:800;font-size:15px;margin-bottom:10px}
@@ -4524,9 +4525,20 @@ function gerarRoteiroCampo(){
   for(let pi=0; pi<pontos.length; pi++){
     const pt=pontos[pi];
     const qtd=pt.itens.length;
+    // anotação de acesso: tipo de ativo (Corte/Aterro) + lado, quando a EAP tiver essa info
+    const semValor=v=>!v || v==='-';
+    const acessos=[...new Set(pt.itens.map(l=>{
+      const eap=l.c.eap; if(!eap) return null;
+      const ativo=String(eap['Ativo']||'').trim();
+      const lado=String(eap['Lado']||'').trim();
+      const partes=[];
+      if(!semValor(ativo) && /corte|aterro/i.test(ativo)) partes.push(ativo);
+      if(!semValor(lado)) partes.push(lado);
+      return partes.length? partes.join(', ') : null;
+    }).filter(Boolean))].join(' · ');
     const topoPonto='<div class="ficha-topo"><div><div class="pt-titulo">PONTO DE INSPEÇÃO '+(pi+1)+' DE '+totalPontos+'</div>'
       +'<div class="pt-sub">'+qtd+' PENDÊNCIA'+(qtd>1?'S':'')+' NESTE PONTO</div></div>'
-      +'<div class="pt-km">KM '+ccFmtKm(pt.km)+'</div></div>';
+      +'<div><div class="pt-km">KM '+ccFmtKm(pt.km)+'</div>'+(acessos?'<div class="pt-km-acesso">'+escHtml(acessos)+'</div>':'')+'</div></div>';
     for(const l of pt.itens){
       contPend++;
       const eap=l.c.eap;
