@@ -4406,6 +4406,17 @@ function montarLinhasRoteiro(){
   if(filtroSegmentoAtivo){
     sel = sel.filter(l=> l.c.eap && String(l.c.eap['Segmento']||'').trim().toUpperCase()===ccSegmentoFiltro.toUpperCase());
   }
+  // a mesma pendência pode estar registrada em mais de um protocolo de CLP (ou repetida
+  // dentro do mesmo protocolo) — mantém só uma ficha por Id_Pendencia, preferindo a
+  // ocorrência que já tem foto de evidência anexada
+  const temFoto=l=>!!(CLP_EVIDENCIAS[l.clp.clp]||{})[l.it.id];
+  const porId=new Map();
+  for(const l of sel){
+    const id=String(l.it.id);
+    const atual=porId.get(id);
+    if(!atual || (!temFoto(atual) && temFoto(l))) porId.set(id,l);
+  }
+  sel=[...porId.values()].sort((a,b)=>a.kmOrdenacao-b.kmOrdenacao);
   // sem KM conhecido não dá pra posicionar no roteiro sequencial
   return sel.filter(l=> l.eapIni!=null || l.eapFim!=null);
 }
