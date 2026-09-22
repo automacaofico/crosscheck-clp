@@ -4402,6 +4402,10 @@ function montarLinhasRoteiro(){
   if(filtroStatusAtivo){
     sel = sel.filter(l=> l.c.eap && (ccStatusFiltro==='encerrado' ? l.c.eapEncerrada : !l.c.eapEncerrada));
   }
+  const filtroSegmentoAtivo = ccSegmentoFiltro!=='todos';
+  if(filtroSegmentoAtivo){
+    sel = sel.filter(l=> l.c.eap && String(l.c.eap['Segmento']||'').trim().toUpperCase()===ccSegmentoFiltro.toUpperCase());
+  }
   // sem KM conhecido não dá pra posicionar no roteiro sequencial
   return sel.filter(l=> l.eapIni!=null || l.eapFim!=null);
 }
