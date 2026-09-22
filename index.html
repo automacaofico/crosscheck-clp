@@ -170,6 +170,9 @@ body.modo-roteiro #roteiroCampo{display:block}
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;margin-bottom:16px}
 #roteiroCampo .foto-depois-box .tit{font-weight:800;color:#9aa5b5;font-size:14px;letter-spacing:.3px}
 #roteiroCampo .foto-depois-box .sub{color:#b7bfc9;font-size:11.5px}
+#roteiroCampo .foto-depois-box.tem-foto{border:1px solid var(--cinza-borda);background:#F5F7FA;padding:10px}
+#roteiroCampo .foto-depois-box.tem-foto img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+#roteiroCampo .foto-depois-box .legenda-depois{font-size:11px;color:var(--cinza-txt);text-align:center;margin-top:6px;font-style:italic}
 #roteiroCampo .linhas-obs{margin-bottom:16px}
 #roteiroCampo .linha-escrita{border-bottom:1px solid #9aa5b5;height:26px}
 #roteiroCampo .rodape-inspecao{display:flex;gap:44px;font-weight:800;font-size:13px;margin-top:auto;align-items:baseline}
@@ -4095,8 +4098,6 @@ Object.assign(CLP_LOGO_EMPRESA, CLP_BATCH3_LOGOS);
 }
 
 let ultimasLinhasBanco=null;
-let ccVerTodos=false;
-function ccToggleTodos(){ ccVerTodos=!ccVerTodos; renderCrosscheck(); }
 const CC_STATUS_LABEL={
   ok:'OK',
   'clp-a-frente':'Encerrado no CLP, ainda aberta na base',
@@ -4221,49 +4222,54 @@ function ccAplicarFiltroKm(){
 function ccLimparFiltroKm(){ ccKmDe=null; ccKmAte=null; renderCrosscheck(); }
 
 // ---- Filtro por status (Encerrada / Aberta, na base EAP) ----
-let ccStatusFiltro='todos'; // 'todos' | 'encerrado' | 'aberta'
+let ccStatusFiltro='aberta'; // 'todos' | 'encerrado' | 'aberta'
 function ccAplicarStatusFiltro(v){ ccStatusFiltro=v; renderCrosscheck(); }
+
+// ---- Índice de evidências fotográficas do CLP, por Id_Pendencia (independente de qual CLP) ----
+function ccEvidenciaIndex(){
+  const idx={};
+  Object.keys(CLP_EVIDENCIAS).forEach(clpKey=>{
+    const porId=CLP_EVIDENCIAS[clpKey]||{};
+    Object.keys(porId).forEach(id=>{ if(!(id in idx)) idx[id]={clpKey,ev:porId[id]}; });
+  });
+  return idx;
+}
+// ---- Linhas do quadro: toda pendência aberta na EAP, com foto do CLP quando existir ----
+function montarLinhasCrosscheckEap(){
+  if(!ultimasLinhasBanco) return [];
+  const idx=ccEvidenciaIndex();
+  return ultimasLinhasBanco.map(eap=>{
+    const id=eap['Id_Pendencia'];
+    const eapEncerrada=String(eap['Status_Pendencia']||'').trim().toUpperCase()==='ENCERRADO';
+    const eapIni=ccKmMetros(eap['KM Inicial']);
+    const eapFim=ccKmMetros(eap['KM Final']);
+    const kmOrdenacao=eapIni!=null?eapIni:(eapFim!=null?eapFim:Infinity);
+    return {eap,id,eapEncerrada,eapIni,eapFim,kmOrdenacao,foto:idx[String(id)]||null};
+  }).sort((a,b)=>a.kmOrdenacao-b.kmOrdenacao);
+}
 
 function renderCrosscheck(){
   const alvo=document.getElementById('main'); if(!alvo)return;
-  let h='<p class="ef-ajuda">Compara, por Id_Pendencia, o status de "Validação VALE" de cada CLP recebido do cliente com o Status_Pendencia da base bruta (Banco de Dados). Itens de todos os CLPs juntos, ordenados por KM (independente do CLP de origem), para seguir a ordem de vistoria em campo. Clique numa foto para ampliar.</p>';
+  let h='<p class="ef-ajuda">Lista as pendências da base EAP (Banco de Dados), ordenadas por KM, com a foto de evidência do CLP correspondente quando existir. Clique numa foto para ampliar.</p>';
   if(!ultimasLinhasBanco){
-    h+='<p class="ef-ajuda">Não foi possível carregar a base de pendências agora — os dados abaixo não puderam ser conferidos.</p>';
-  }
-  const lista=ccListaClps();
-  if(!lista.length){
-    h+='<p class="ef-ajuda">Nenhum CLP carregado ainda. Use "📂 Carregar CLP" para conferir um arquivo.</p>';
+    h+='<p class="ef-ajuda">Não foi possível carregar a base de pendências agora.</p>';
     alvo.innerHTML=h;
     return;
   }
 
-  // ---- lista plana de todos os itens de todos os CLPs, ordenada por KM ----
-  let linhas=[];
-  lista.forEach(clp=>{
-    clp.itens.forEach(it=>{
-      const c=ccClassificar(it);
-      const eapIni = c.eap? ccKmMetros(c.eap['KM Inicial']) : null;
-      const eapFim = c.eap? ccKmMetros(c.eap['KM Final']) : null;
-      const kmOrdenacao = eapIni!=null? eapIni : (eapFim!=null? eapFim : Infinity);
-      linhas.push({clp,it,c,eapIni,eapFim,kmOrdenacao});
-    });
-  });
-  linhas.sort((a,b)=>a.kmOrdenacao-b.kmOrdenacao);
+  const linhas=montarLinhasCrosscheckEap();
 
-  // ---- resumo agregado de todos os CLPs ----
-  const totGeral={ok:0,'clp-a-frente':0,'base-a-frente':0,'nao-encontrado':0};
-  linhas.forEach(l=>totGeral[l.c.status]++);
-  h+='<div class="cc-bloco"><h3>Resumo geral — '+lista.length+' CLP(s)</h3>'
-    +'<p class="ef-ajuda" style="margin-top:-2px">'+linhas.length+' itens conferidos no total.</p>'
+  // ---- resumo agregado ----
+  const totGeral={comFoto:0,semFoto:0};
+  linhas.forEach(l=> l.foto? totGeral.comFoto++ : totGeral.semFoto++);
+  h+='<div class="cc-bloco"><h3>Resumo geral</h3>'
+    +'<p class="ef-ajuda" style="margin-top:-2px">'+linhas.length+' pendências na base EAP.</p>'
     +'<div class="kpis">'
-    +'<div class="kpi verde"><div class="rot">OK</div><div class="val">'+totGeral.ok+'</div></div>'
-    +'<div class="kpi laranja"><div class="rot">Encerrado no CLP, aberta na base</div><div class="val">'+totGeral['clp-a-frente']+'</div></div>'
-    +'<div class="kpi azul"><div class="rot">Encerrada na base, pendente no CLP</div><div class="val">'+totGeral['base-a-frente']+'</div></div>'
-    +'<div class="kpi vermelho"><div class="rot">ID não encontrado na base</div><div class="val">'+totGeral['nao-encontrado']+'</div></div>'
+    +'<div class="kpi verde"><div class="rot">Com foto do CLP</div><div class="val">'+totGeral.comFoto+'</div></div>'
+    +'<div class="kpi vermelho"><div class="rot">Sem foto do CLP</div><div class="val">'+totGeral.semFoto+'</div></div>'
     +'</div></div>';
 
-  const divergentes=linhas.filter(l=>l.c.status!=='ok');
-  let mostrar= ccVerTodos||!divergentes.length ? linhas : divergentes;
+  let mostrar=linhas;
 
   const filtroKmAtivo = ccKmDe!=null || ccKmAte!=null;
   if(filtroKmAtivo){
@@ -4277,7 +4283,7 @@ function renderCrosscheck(){
   }
   const filtroStatusAtivo = ccStatusFiltro!=='todos';
   if(filtroStatusAtivo){
-    mostrar = mostrar.filter(l=> l.c.eap && (ccStatusFiltro==='encerrado' ? l.c.eapEncerrada : !l.c.eapEncerrada));
+    mostrar = mostrar.filter(l=> ccStatusFiltro==='encerrado' ? l.eapEncerrada : !l.eapEncerrada);
   }
 
   const pillBtn=(rotulo,valor,ativo)=>'<button type="button" onclick="ccAplicarStatusFiltro(\''+valor+'\')" style="border:1px solid '+(ativo?'var(--navy)':'var(--cinza-borda)')+';background:'+(ativo?'var(--navy)':'#fff')+';color:'+(ativo?'#fff':'var(--navy)')+';padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+rotulo+'</button>';
@@ -4298,34 +4304,31 @@ function renderCrosscheck(){
     +'</div>';
 
   h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">'
-    +'<span class="ef-ajuda" style="margin:0">'+((filtroKmAtivo||filtroStatusAtivo)?('Mostrando '+mostrar.length+' item(ns) filtrado(s). '):'')+(ccVerTodos||!divergentes.length?('Mostrando '+((filtroKmAtivo||filtroStatusAtivo)?'':'todos os ')+linhas.length+' itens.'):('Mostrando '+divergentes.length+' item(ns) com divergência de '+linhas.length+' no total.'))+'</span>'
-    +(divergentes.length?'<button type="button" onclick="ccToggleTodos()" style="border:1px solid var(--cinza-borda);background:#fff;color:var(--navy);padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+(ccVerTodos?'Mostrar só divergências':'Mostrar todos os itens (com fotos)')+'</button>':'')
+    +'<span class="ef-ajuda" style="margin:0">Mostrando '+mostrar.length+' de '+linhas.length+' pendência(s).</span>'
     +'</div>';
   h+='<div style="overflow-x:auto"><table class="cc-tab"><thead><tr>'
     +'<th>CLP</th><th>ID</th><th>Certificação</th><th>Segmento</th><th>Ativo</th><th>Empresa</th><th>Origem</th><th>Tipo</th>'
     +'<th class="l">Descrição da pendência</th><th>KM inicial</th><th>KM final</th>'
-    +'<th>Item (CLP)</th><th>Validação (CLP)</th><th>Status (base)</th><th>Divergência</th><th>Evidência</th>'
+    +'<th>Status (base)</th><th>Evidência</th>'
     +'</tr></thead><tbody>'
     +mostrar.map(l=>{
-      const eap=l.c.eap;
-      const eapTxt=eap?(l.c.eapEncerrada?'Encerrado':'Aberta'):'—';
-      const divTxt=l.c.status==='ok' ? '<span style="color:var(--verde);font-weight:700">OK</span>' : CC_STATUS_LABEL[l.c.status];
-      const descricao=(eap && eap['Descrição Pendencia']) ? eap['Descrição Pendencia'] : l.it.resumo;
-      const g=campo=>eap&&eap[campo]!=null&&eap[campo]!=='' ? eap[campo] : '—';
-      const kmIni = eap? (ccFmtKm(eap['KM Inicial'])||'—') : '—';
-      const kmFim = eap? (ccFmtKm(eap['KM Final'])||'—') : '—';
-      return '<tr><td><b>'+escHtml(l.clp.clp)+'</b></td><td><b>'+l.it.id+'</b></td>'
+      const eap=l.eap;
+      const eapTxt=l.eapEncerrada?'Encerrado':'Aberta';
+      const g=campo=>eap[campo]!=null&&eap[campo]!=='' ? eap[campo] : '—';
+      const kmIni = ccFmtKm(eap['KM Inicial'])||'—';
+      const kmFim = ccFmtKm(eap['KM Final'])||'—';
+      const clpLabel = l.foto? l.foto.clpKey : '—';
+      const fotosHtml = l.foto? ccFotosHTML(l.foto.clpKey, l.id) : '<span class="sem">sem foto</span>';
+      return '<tr><td><b>'+escHtml(clpLabel)+'</b></td><td><b>'+escHtml(l.id)+'</b></td>'
         +'<td>'+escHtml(g('Certificação ?'))+'</td>'
         +'<td>'+escHtml(g('Segmento'))+'</td>'
         +'<td>'+escHtml(g('Ativo'))+'</td>'
         +'<td>'+escHtml(g('Empresa'))+'</td>'
         +'<td>'+escHtml(g('Origem'))+'</td>'
         +'<td>'+escHtml(g('Tipo de Pendencia'))+'</td>'
-        +'<td class="l">'+escHtml(descricao)+'</td>'
+        +'<td class="l">'+escHtml(g('Descrição Pendencia'))+'</td>'
         +'<td>'+escHtml(kmIni)+'</td><td>'+escHtml(kmFim)+'</td>'
-        +'<td>'+escHtml(l.it.item)+'</td>'
-        +'<td>'+escHtml(l.it.validacao)+'</td><td>'+eapTxt+'</td>'
-        +'<td class="l">'+divTxt+'</td><td>'+ccFotosHTML(l.clp.clp,l.it.id)+'</td></tr>';
+        +'<td>'+eapTxt+'</td><td>'+fotosHtml+'</td></tr>';
     }).join('')
     +'</tbody></table></div>';
   h+='</div>';
@@ -4394,11 +4397,53 @@ function montarFotosFicha(clpKey, id){
     return '<img'+atributos+' alt="'+escHtml(e.label)+'" title="'+escHtml(e.label)+'">';
   }).join('');
 }
+function montarFotoDepois(id){
+  const f=FOTOS_DEPOIS[id];
+  if(!f){
+    return '<div class="foto-depois-box"><div class="tit">INSERIR FOTO AQUI</div><div class="sub">Samsung Notes: + &gt; Imagem &gt; Galeria</div></div>';
+  }
+  return '<div class="foto-depois-box tem-foto"><img src="evidencias/'+escHtml(f.arquivo)+'" alt="Foto da reinspeção">'
+    +(f.obs?'<div class="legenda-depois">Nota da caminhada: '+escHtml(f.obs)+'</div>':'')+'</div>';
+}
 function sairRoteiroCampo(){
   document.body.classList.remove('modo-roteiro');
   document.getElementById('roteiroPageStyle').textContent='';
   window.scrollTo(0,0);
 }
+// Fotos da caminhada de reinspeção (17/09/2026) com evidência do "depois", associadas por
+// numero de pendencia carimbado na propria foto e confirmado por KM contra a base EAP.
+// Fotos sem numero ("pendencia nova") ficaram de fora — sao achados novos, ainda sem ID no
+// sistema, e nao podem ser associadas a um registro existente.
+const FOTOS_DEPOIS={
+  750:{arquivo:'depois_750.jpg',obs:'concluída'},
+  1863:{arquivo:'depois_1863.jpg',obs:'formação de processos erosivos'},
+  695:{arquivo:'depois_695.jpg',obs:'concluída'},
+  736:{arquivo:'depois_736.jpg',obs:'em aberto'},
+  556:{arquivo:'depois_556.jpg',obs:'repasse de hidro resolve?'},
+  561:{arquivo:'depois_561.jpg'},
+  562:{arquivo:'depois_562.jpg'},
+  697:{arquivo:'depois_697.jpg'},
+  564:{arquivo:'depois_564.jpg'},
+  565:{arquivo:'depois_565.jpg'},
+  738:{arquivo:'depois_738.jpg'},
+  566:{arquivo:'depois_566.jpg'},
+  567:{arquivo:'depois_567.jpg'},
+  1870:{arquivo:'depois_1870.jpg'},
+  1894:{arquivo:'depois_1894.jpg'},
+  730:{arquivo:'depois_730.jpg'},
+  733:{arquivo:'depois_733.jpg',obs:'não encontrada'},
+  699:{arquivo:'depois_699.jpg',obs:'tem no projeto?'},
+  1879:{arquivo:'depois_1879.jpg'},
+  1895:{arquivo:'depois_1895.jpg'},
+  401:{arquivo:'depois_401.jpg'},
+  427:{arquivo:'depois_427.jpg'},
+  367:{arquivo:'depois_367.jpg'},
+  549:{arquivo:'depois_549.jpg'},
+  531:{arquivo:'depois_531.jpg',obs:'erosão + cerca direcionadora'},
+  532:{arquivo:'depois_532.jpg',obs:'dissipador pré-moldado?'},
+  533:{arquivo:'depois_533.jpg',obs:'dissipador?'},
+  1891:{arquivo:'depois_1891.jpg'}
+};
 const DECISOES_INSPECAO=[
   {classe:'corrigida',label:'Corrigida'},
   {classe:'parcial',label:'Parcialmente corrigida'},
@@ -4479,7 +4524,7 @@ function gerarRoteiroCampo(){
             +'<div class="decisao-sub">Marque uma opção com a S Pen</div>'
             +'<div class="decisao-grid">'+decisoesHtml+'</div>'
             +'<div class="secao-titulo">Foto da inspeção - depois</div>'
-            +'<div class="foto-depois-box"><div class="tit">INSERIR FOTO AQUI</div><div class="sub">Samsung Notes: + &gt; Imagem &gt; Galeria</div></div>'
+            +montarFotoDepois(l.it.id)
             +'<div class="secao-titulo">Observações complementares</div>'
             +'<div class="linhas-obs"><div class="linha-escrita"></div><div class="linha-escrita"></div><div class="linha-escrita"></div></div>'
             +'<div class="rodape-inspecao"><span>Data:<span class="linha-escrita"></span></span><span>Inspetor:<span class="linha-escrita"></span></span></div>'
