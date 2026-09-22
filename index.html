@@ -4225,9 +4225,14 @@ function ccLimparFiltroKm(){ ccKmDe=null; ccKmAte=null; renderCrosscheck(); }
 let ccStatusFiltro='aberta'; // 'todos' | 'encerrado' | 'aberta'
 function ccAplicarStatusFiltro(v){ ccStatusFiltro=v; renderCrosscheck(); }
 
-// ---- Filtro por Segmento (dropdown, valores vêm da própria base carregada) ----
+// ---- Filtro por Segmento (campo de texto + Aplicar, igual ao filtro de KM) ----
 let ccSegmentoFiltro='todos';
-function ccAplicarSegmentoFiltro(v){ ccSegmentoFiltro=v; renderCrosscheck(); }
+function ccAplicarFiltroSegmento(){
+  const v=document.getElementById('ccSegmentoInput').value.trim();
+  ccSegmentoFiltro = v===''? 'todos' : v;
+  renderCrosscheck();
+}
+function ccLimparFiltroSegmento(){ ccSegmentoFiltro='todos'; renderCrosscheck(); }
 
 // ---- Índice de evidências fotográficas do CLP, por Id_Pendencia (independente de qual CLP) ----
 function ccEvidenciaIndex(){
@@ -4293,7 +4298,7 @@ function renderCrosscheck(){
     .sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true}));
   const filtroSegmentoAtivo = ccSegmentoFiltro!=='todos';
   if(filtroSegmentoAtivo){
-    mostrar = mostrar.filter(l=> String(l.eap['Segmento']||'').trim()===ccSegmentoFiltro);
+    mostrar = mostrar.filter(l=> String(l.eap['Segmento']||'').trim().toUpperCase()===ccSegmentoFiltro.toUpperCase());
   }
 
   const pillBtn=(rotulo,valor,ativo)=>'<button type="button" onclick="ccAplicarStatusFiltro(\''+valor+'\')" style="border:1px solid '+(ativo?'var(--navy)':'var(--cinza-borda)')+';background:'+(ativo?'var(--navy)':'#fff')+';color:'+(ativo?'#fff':'var(--navy)')+';padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+rotulo+'</button>';
@@ -4313,11 +4318,11 @@ function renderCrosscheck(){
     +pillBtn('Abertas','aberta',ccStatusFiltro==='aberta')
     +'</div>';
   h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'
-    +'<label class="ef-ajuda" style="margin:0">Segmento:</label>'
-    +'<select onchange="ccAplicarSegmentoFiltro(this.value)" style="padding:6px 9px;border:1px solid var(--cinza-borda);border-radius:8px;font-family:inherit;font-size:12px;color:var(--navy)">'
-    +'<option value="todos"'+(ccSegmentoFiltro==='todos'?' selected':'')+'>Todos</option>'
-    +segmentosDisponiveis.map(s=>'<option value="'+escHtml(s)+'"'+(ccSegmentoFiltro===s?' selected':'')+'>'+escHtml(s)+'</option>').join('')
-    +'</select>'
+    +'<label class="ef-ajuda" style="margin:0">Filtrar por Segmento:</label>'
+    +'<input type="text" id="ccSegmentoInput" list="ccSegmentoList" placeholder="ex.: 1.4" value="'+(filtroSegmentoAtivo?escHtml(ccSegmentoFiltro):'')+'" style="width:140px;padding:6px 9px;border:1px solid var(--cinza-borda);border-radius:8px;font-family:inherit;font-size:12px">'
+    +'<datalist id="ccSegmentoList">'+segmentosDisponiveis.map(s=>'<option value="'+escHtml(s)+'">').join('')+'</datalist>'
+    +'<button type="button" onclick="ccAplicarFiltroSegmento()" style="border:1px solid var(--navy);background:var(--navy);color:#fff;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Aplicar</button>'
+    +(filtroSegmentoAtivo?'<button type="button" onclick="ccLimparFiltroSegmento()" style="border:1px solid var(--cinza-borda);background:#fff;color:var(--navy);padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Limpar filtro</button>':'')
     +'</div>';
 
   h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">'
