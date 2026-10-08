@@ -4277,6 +4277,15 @@ function ccAplicarFiltroSegmento(){
 }
 function ccLimparFiltroSegmento(){ ccSegmentoFiltro='todos'; renderCrosscheck(); }
 
+// ---- Filtro por Empresa (mesmo formato do filtro de Segmento) ----
+let ccEmpresaFiltro='todos';
+function ccAplicarFiltroEmpresa(){
+  const v=document.getElementById('ccEmpresaInput').value.trim();
+  ccEmpresaFiltro = v===''? 'todos' : v;
+  renderCrosscheck();
+}
+function ccLimparFiltroEmpresa(){ ccEmpresaFiltro='todos'; renderCrosscheck(); }
+
 // ---- Índice de evidências fotográficas do CLP, por Id_Pendencia (independente de qual CLP) ----
 function ccEvidenciaIndex(){
   const idx={};
@@ -4349,6 +4358,12 @@ function renderCrosscheck(){
   if(filtroSegmentoAtivo){
     mostrar = mostrar.filter(l=> String(l.eap['Segmento']||'').trim().toUpperCase()===ccSegmentoFiltro.toUpperCase());
   }
+  const empresasDisponiveis=[...new Set(linhas.map(l=>String(l.eap['Empresa']||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const filtroEmpresaAtivo = ccEmpresaFiltro!=='todos';
+  if(filtroEmpresaAtivo){
+    mostrar = mostrar.filter(l=> String(l.eap['Empresa']||'').trim().toUpperCase()===ccEmpresaFiltro.toUpperCase());
+  }
 
   const pillBtn=(rotulo,valor,ativo)=>'<button type="button" onclick="ccAplicarStatusFiltro(\''+valor+'\')" style="border:1px solid '+(ativo?'var(--navy)':'var(--cinza-borda)')+';background:'+(ativo?'var(--navy)':'#fff')+';color:'+(ativo?'#fff':'var(--navy)')+';padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+rotulo+'</button>';
   h+='<div class="cc-bloco">';
@@ -4372,6 +4387,13 @@ function renderCrosscheck(){
     +'<datalist id="ccSegmentoList">'+segmentosDisponiveis.map(s=>'<option value="'+escHtml(s)+'">').join('')+'</datalist>'
     +'<button type="button" onclick="ccAplicarFiltroSegmento()" style="border:1px solid var(--navy);background:var(--navy);color:#fff;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Aplicar</button>'
     +(filtroSegmentoAtivo?'<button type="button" onclick="ccLimparFiltroSegmento()" style="border:1px solid var(--cinza-borda);background:#fff;color:var(--navy);padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Limpar filtro</button>':'')
+    +'</div>';
+  h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'
+    +'<label class="ef-ajuda" style="margin:0">Filtrar por Empresa:</label>'
+    +'<input type="text" id="ccEmpresaInput" list="ccEmpresaList" placeholder="ex.: ATERPA" value="'+(filtroEmpresaAtivo?escHtml(ccEmpresaFiltro):'')+'" style="width:140px;padding:6px 9px;border:1px solid var(--cinza-borda);border-radius:8px;font-family:inherit;font-size:12px">'
+    +'<datalist id="ccEmpresaList">'+empresasDisponiveis.map(s=>'<option value="'+escHtml(s)+'">').join('')+'</datalist>'
+    +'<button type="button" onclick="ccAplicarFiltroEmpresa()" style="border:1px solid var(--navy);background:var(--navy);color:#fff;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Aplicar</button>'
+    +(filtroEmpresaAtivo?'<button type="button" onclick="ccLimparFiltroEmpresa()" style="border:1px solid var(--cinza-borda);background:#fff;color:var(--navy);padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">Limpar filtro</button>':'')
     +'</div>';
 
   h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">'
@@ -4454,6 +4476,10 @@ function montarLinhasRoteiro(){
   const filtroSegmentoAtivo = ccSegmentoFiltro!=='todos';
   if(filtroSegmentoAtivo){
     sel = sel.filter(l=> l.c.eap && String(l.c.eap['Segmento']||'').trim().toUpperCase()===ccSegmentoFiltro.toUpperCase());
+  }
+  const filtroEmpresaAtivo = ccEmpresaFiltro!=='todos';
+  if(filtroEmpresaAtivo){
+    sel = sel.filter(l=> l.c.eap && String(l.c.eap['Empresa']||'').trim().toUpperCase()===ccEmpresaFiltro.toUpperCase());
   }
   // a mesma pendência pode estar registrada em mais de um protocolo de CLP (ou repetida
   // dentro do mesmo protocolo) — mantém só uma ficha por Id_Pendencia, preferindo a
